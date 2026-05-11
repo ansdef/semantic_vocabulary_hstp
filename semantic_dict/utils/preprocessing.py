@@ -32,11 +32,32 @@ def get_stopwords():
     return _stopwords
 
 
+# Аббревиатуры, которые regex разрушает (& → пробел), нормализуем заранее
+_ABBREV = {
+    r"\br\s*&\s*d\b": "исследование разработка",
+    r"\bр\s*&\s*д\b": "исследование разработка",
+    r"\broi\b":        "рентабельность доходность",
+    r"\bкпд\b":        "эффективность производительность",
+    r"\bжкх\b":        "жилищный коммунальный",
+    r"\bмсп\b":        "малый предприниматель",
+    r"\bврп\b":        "валовый региональный продукт",
+    r"\bввп\b":        "валовый продукт",
+    r"\bит\b":         "информационный технология",
+}
+
+
+def _normalize(text: str) -> str:
+    for pat, repl in _ABBREV.items():
+        text = re.sub(pat, repl, text, flags=re.IGNORECASE)
+    return text
+
+
 def preprocess(text: str) -> list[str]:
     morph = get_morph()
     stopwords = get_stopwords()
 
     text = text.lower()
+    text = _normalize(text)
     text = re.sub(r"[^\w\s\-]", " ", text, flags=re.UNICODE)
     text = re.sub(r"(?<!\w)-|-(?!\w)", " ", text)
 
