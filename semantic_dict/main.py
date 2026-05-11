@@ -1,3 +1,4 @@
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -9,7 +10,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from match_engine import search  # noqa: E402
+# Файл называется 07_match_engine.py — имя начинается с цифры, importlib обязателен
+_spec = importlib.util.spec_from_file_location("match_engine", _BASE / "07_match_engine.py")
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+search = _mod.search
 
 app = FastAPI(title="Semantic Vocabulary API")
 
