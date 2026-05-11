@@ -93,32 +93,34 @@ const INDEX_LABELS = {economic:'Экономический', personnel:'Кадр
                       innovation:'Инновационный', resource:'Ресурсный'};
 
 function eulerSVG(a, b, inter) {
-  const W = 180, H = 96, r = 34, cy = H / 2;
-  // Расстояние между центрами: 0 overlap → 2r (не пересекаются), full overlap → 0
+  // a = cloud_A_size (запрос), b = cloud_B_size (показатель)
+  // левый круг = показатель (b), правый круг = запрос (a)
+  const W = 180, H = 104, r = 34, cy = (H - 16) / 2;
   const ov = Math.min(inter / Math.min(a, b), 1);
   const dist = Math.max(4, 2 * r * (1 - ov * 0.82));
   const cx = W / 2;
-  const x1 = cx - dist / 2;
-  const x2 = cx + dist / 2;
-  const lA = x1 - r * 0.5;        // подпись левого круга (A-only зона)
-  const lI = (x1 + x2) / 2;       // подпись пересечения
-  const lB = x2 + r * 0.38;       // подпись правого круга (B-only зона)
+  const xB = cx - dist / 2;   // центр левого круга (показатель)
+  const xA = cx + dist / 2;   // центр правого круга (запрос)
+  const lB = xB - r * 0.5;    // число показателя (левая зона)
+  const lI = (xB + xA) / 2;   // число пересечения
+  const lA = xA + r * 0.38;   // число запроса (правая зона)
+  const labelY = cy + r + 13; // подписи под кругами
   const f = v => v.toFixed(1);
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="${f(x1)}" cy="${cy}" r="${r}"
-      fill="rgba(79,110,247,0.13)" stroke="#4f6ef7" stroke-width="1.5"/>
-    <circle cx="${f(x2)}" cy="${cy}" r="${r}"
+    <circle cx="${f(xB)}" cy="${cy}" r="${r}"
       fill="rgba(100,116,139,0.10)" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="${f(lA)}" y="${cy - 5}" text-anchor="middle"
-      font-size="12" font-weight="700" fill="#4f6ef7">${a}</text>
-    <text x="${f(lA)}" y="${cy + 9}" text-anchor="middle"
-      font-size="8" fill="#4f6ef7">запрос</text>
+    <circle cx="${f(xA)}" cy="${cy}" r="${r}"
+      fill="rgba(79,110,247,0.13)" stroke="#4f6ef7" stroke-width="1.5"/>
+    <text x="${f(lB)}" y="${cy + 4}" text-anchor="middle"
+      font-size="12" font-weight="700" fill="#64748b">${b}</text>
     <text x="${f(lI)}" y="${cy + 4}" text-anchor="middle"
       font-size="12" font-weight="700" fill="#6d28d9">${inter}</text>
-    <text x="${f(lB)}" y="${cy - 5}" text-anchor="middle"
-      font-size="12" font-weight="700" fill="#64748b">${b}</text>
-    <text x="${f(lB)}" y="${cy + 9}" text-anchor="middle"
-      font-size="8" fill="#64748b">показатель</text>
+    <text x="${f(lA)}" y="${cy + 4}" text-anchor="middle"
+      font-size="12" font-weight="700" fill="#4f6ef7">${a}</text>
+    <text x="${f(xB)}" y="${labelY}" text-anchor="middle"
+      font-size="8" fill="#94a3b8">показатель</text>
+    <text x="${f(xA)}" y="${labelY}" text-anchor="middle"
+      font-size="8" fill="#4f6ef7">запрос</text>
   </svg>`;
 }
 
