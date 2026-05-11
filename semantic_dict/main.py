@@ -95,15 +95,14 @@ const INDEX_LABELS = {economic:'Экономический', personnel:'Кадр
 function eulerSVG(a, b, inter) {
   // a = cloud_A_size (запрос), b = cloud_B_size (показатель)
   // левый круг = показатель (b), правый круг = запрос (a)
-  const W = 180, H = 104, r = 34, cy = (H - 16) / 2;
-  const dist = r * 0.9;  // fixed visual overlap regardless of intersection count
+  const W = 190, H = 100, r = 32, cy = (H - 18) / 2;
+  const dist = r * 1.35;  // fixed visual overlap, moderate size
   const cx = W / 2;
-  const xB = cx - dist / 2;   // центр левого круга (показатель)
-  const xA = cx + dist / 2;   // центр правого круга (запрос)
-  const lB = xB - r * 0.5;    // число показателя (левая зона)
-  const lI = (xB + xA) / 2;   // число пересечения
-  const lA = xA + r * 0.38;   // число запроса (правая зона)
-  const labelY = cy + r + 13; // подписи под кругами
+  const xB = cx - dist / 2;
+  const xA = cx + dist / 2;
+  const lB = xB - r * 0.52;
+  const lI = (xB + xA) / 2;
+  const lA = xA + r * 0.42;
   const f = v => v.toFixed(1);
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     <circle cx="${f(xB)}" cy="${cy}" r="${r}"
@@ -116,10 +115,10 @@ function eulerSVG(a, b, inter) {
       font-size="12" font-weight="700" fill="#6d28d9">${inter}</text>
     <text x="${f(lA)}" y="${cy + 4}" text-anchor="middle"
       font-size="12" font-weight="700" fill="#4f6ef7">${a}</text>
-    <text x="${f(xB)}" y="${labelY}" text-anchor="middle"
-      font-size="8" fill="#94a3b8">показатель</text>
-    <text x="${f(xA)}" y="${labelY}" text-anchor="middle"
-      font-size="8" fill="#4f6ef7">запрос</text>
+    <text x="4" y="${H - 4}" text-anchor="start"
+      font-size="7.5" fill="#94a3b8">показатель</text>
+    <text x="${W - 4}" y="${H - 4}" text-anchor="end"
+      font-size="7.5" fill="#4f6ef7">запрос</text>
   </svg>`;
 }
 
