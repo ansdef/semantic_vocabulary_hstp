@@ -96,8 +96,7 @@ function eulerSVG(a, b, inter) {
   // a = cloud_A_size (запрос), b = cloud_B_size (показатель)
   // левый круг = показатель (b), правый круг = запрос (a)
   const W = 180, H = 104, r = 34, cy = (H - 16) / 2;
-  const ov = Math.min(inter / Math.min(a, b), 1);
-  const dist = Math.max(4, 2 * r * (1 - ov * 0.82));
+  const dist = r * 0.9;  // fixed visual overlap regardless of intersection count
   const cx = W / 2;
   const xB = cx - dist / 2;   // центр левого круга (показатель)
   const xA = cx + dist / 2;   // центр правого круга (запрос)
