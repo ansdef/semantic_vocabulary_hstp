@@ -1,10 +1,9 @@
 import sys
 from pathlib import Path
 
-# Добавляем semantic_dict в путь, чтобы переиспользовать существующие модули
-_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_ROOT / "semantic_dict"))
-sys.path.insert(0, str(_ROOT / "semantic_dict" / "utils"))
+_BASE = Path(__file__).parent  # semantic_dict/
+sys.path.insert(0, str(_BASE))
+sys.path.insert(0, str(_BASE / "utils"))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
