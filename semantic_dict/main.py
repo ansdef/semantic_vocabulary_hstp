@@ -93,38 +93,32 @@ const INDEX_LABELS = {economic:'Экономический', personnel:'Кадр
                       innovation:'Инновационный', resource:'Ресурсный'};
 
 function eulerSVG(a, b, inter) {
-  const W = 190, H = 100;
-  const cy = H / 2;
-  // Радиусы: логарифмическое масштабирование, чтобы маленький A не терялся
-  const maxR = 38, minR = 16;
-  const scale = Math.log1p(Math.max(a, b));
-  const ra = Math.max(minR, maxR * Math.log1p(a) / scale);
-  const rb = Math.max(minR, maxR * Math.log1p(b) / scale);
-  // Расстояние между центрами: overlap ratio определяет перекрытие
+  const W = 180, H = 96, r = 34, cy = H / 2;
+  // Расстояние между центрами: 0 overlap → 2r (не пересекаются), full overlap → 0
   const ov = Math.min(inter / Math.min(a, b), 1);
-  const dist = Math.max(Math.abs(ra - rb) + 2, (ra + rb) * (1 - ov * 0.75));
+  const dist = Math.max(4, 2 * r * (1 - ov * 0.82));
   const cx = W / 2;
   const x1 = cx - dist / 2;
   const x2 = cx + dist / 2;
-  // Позиции подписей
-  const labelA = x1 - ra * 0.45;
-  const labelB = x2 + rb * 0.3;
-  const labelI = (x1 + x2) / 2;
+  const lA = x1 - r * 0.5;        // подпись левого круга (A-only зона)
+  const lI = (x1 + x2) / 2;       // подпись пересечения
+  const lB = x2 + r * 0.38;       // подпись правого круга (B-only зона)
+  const f = v => v.toFixed(1);
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="${x1.toFixed(1)}" cy="${cy}" r="${ra.toFixed(1)}"
-      fill="rgba(79,110,247,0.12)" stroke="#4f6ef7" stroke-width="1.5"/>
-    <circle cx="${x2.toFixed(1)}" cy="${cy}" r="${rb.toFixed(1)}"
-      fill="rgba(100,116,139,0.1)" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="${labelA.toFixed(1)}" y="${(cy - 4).toFixed(1)}" text-anchor="middle"
-      font-size="13" font-weight="700" fill="#4f6ef7">${a}</text>
-    <text x="${labelA.toFixed(1)}" y="${(cy + 10).toFixed(1)}" text-anchor="middle"
-      font-size="9" fill="#4f6ef7">запрос</text>
-    <text x="${labelI.toFixed(1)}" y="${(cy + 5).toFixed(1)}" text-anchor="middle"
+    <circle cx="${f(x1)}" cy="${cy}" r="${r}"
+      fill="rgba(79,110,247,0.13)" stroke="#4f6ef7" stroke-width="1.5"/>
+    <circle cx="${f(x2)}" cy="${cy}" r="${r}"
+      fill="rgba(100,116,139,0.10)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="${f(lA)}" y="${cy - 5}" text-anchor="middle"
+      font-size="12" font-weight="700" fill="#4f6ef7">${a}</text>
+    <text x="${f(lA)}" y="${cy + 9}" text-anchor="middle"
+      font-size="8" fill="#4f6ef7">запрос</text>
+    <text x="${f(lI)}" y="${cy + 4}" text-anchor="middle"
       font-size="12" font-weight="700" fill="#6d28d9">${inter}</text>
-    <text x="${labelB.toFixed(1)}" y="${(cy - 4).toFixed(1)}" text-anchor="middle"
-      font-size="13" font-weight="700" fill="#64748b">${b}</text>
-    <text x="${labelB.toFixed(1)}" y="${(cy + 10).toFixed(1)}" text-anchor="middle"
-      font-size="9" fill="#64748b">показатель</text>
+    <text x="${f(lB)}" y="${cy - 5}" text-anchor="middle"
+      font-size="12" font-weight="700" fill="#64748b">${b}</text>
+    <text x="${f(lB)}" y="${cy + 9}" text-anchor="middle"
+      font-size="8" fill="#64748b">показатель</text>
   </svg>`;
 }
 
