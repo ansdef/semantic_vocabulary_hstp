@@ -21,8 +21,10 @@ _SYNONYMS_PATH = _BASE / "utils" / "synonyms.json"
 
 _indicator_clouds: dict | None = None
 _synonyms: dict | None = None
-_ruwordnet = None          # None = not yet tried; False = unavailable
-_ruwn_cache: dict = {}     # lemma → [synonyms] runtime cache
+_indicator_vocab: set | None = None    # термины, присутствующие в ≥1 облаке
+_rare_vocab: set | None = None         # термины с IDF-порогом (≤15% облаков)
+_ruwordnet = None                      # None = не инициализирован; False = недоступен
+_ruwn_cache: dict = {}                 # lemma → [synonyms], runtime-кеш
 
 
 def _get_clouds() -> dict:
@@ -39,6 +41,28 @@ def _get_synonyms() -> dict:
     return _synonyms
 
 
+def _get_indicator_vocab() -> tuple[set, set]:
+    """
+    Возвращает два множества:
+      vocab      — все термины, присутствующие хотя бы в 1 облаке показателя
+      rare_vocab — термины, присутствующие не более чем в MAX_DF облаках
+                   (IDF-фильтр: слишком частые слова — «деятельность», «дело» —
+                   не являются дискриминаторами и исключаются из синонимного расширения)
+    """
+    global _indicator_vocab, _rare_vocab
+    if _indicator_vocab is None:
+        clouds = _get_clouds()
+        total = len(clouds)
+        MAX_DF = int(total * 0.15)   # ≤15% облаков → считаем специфичным
+        freq: dict[str, int] = {}
+        for data in clouds.values():
+            for term in data["cloud"]:
+                freq[term] = freq.get(term, 0) + 1
+        _indicator_vocab = set(freq)
+        _rare_vocab = {t for t, n in freq.items() if n <= MAX_DF}
+    return _indicator_vocab, _rare_vocab
+
+
 def _get_ruwordnet():
     global _ruwordnet
     if _ruwordnet is None:
@@ -51,7 +75,7 @@ def _get_ruwordnet():
 
 
 def _ruwordnet_synonyms(lemma: str) -> list[str]:
-    """Live RuWordNet lookup: возвращает синонимы леммы (кешируется)."""
+    """Live-поиск синонимов леммы в RuWordNet (с кешированием)."""
     if lemma in _ruwn_cache:
         return _ruwn_cache[lemma]
     wn = _get_ruwordnet()
@@ -68,31 +92,66 @@ def _ruwordnet_synonyms(lemma: str) -> list[str]:
                     syns.add(s)
     except Exception:
         pass
-    result = list(syns)[:5]
+    result = list(syns)
     _ruwn_cache[lemma] = result
     return result
 
 
+def _expand_lemma(lemma: str, synonyms: dict, vocab: set, rare_vocab: set) -> list[str]:
+    """
+    Полный алгоритм расширения одной леммы запроса до контекстных синонимов.
+
+    Шаг 1 — источник синонимов (приоритетность):
+      a) synonyms.json  — ручные переопределения и RuWordNet от индикаторов
+                          (если запись есть, она точнее и берётся как есть)
+      b) RuWordNet live — для слов вне словаря показателей (любой запрос)
+
+    Шаг 2 — фильтрация по словарю показателей:
+      • термин должен присутствовать хотя бы в одном облаке показателя
+        (иначе расширение никогда не даст совпадения)
+      • термин не должен быть в >15% облаков (IDF-порог):
+        слишком частые слова — «деятельность» (25%), «дело» (37%) —
+        не различают показатели, а лишь раздувают пересечение
+    """
+    curated = synonyms.get(lemma)
+    if curated:
+        # Curated запись: качество гарантировано, используем без IDF-фильтра
+        # (пользователь сам решил, что эти синонимы подходят)
+        source = curated
+        use_idf = False
+    else:
+        # Незнакомое слово: live-поиск в RuWordNet, применяем оба фильтра
+        source = _ruwordnet_synonyms(lemma)
+        use_idf = True
+
+    result: list[str] = []
+    for syn in source:
+        for sg in build_ngrams(preprocess(syn), max_n=3):
+            if sg not in vocab:
+                continue                   # термина нет ни в одном показателе
+            if use_idf and sg not in rare_vocab:
+                continue                   # слишком частый — не дискриминатор
+            if sg not in result:
+                result.append(sg)
+
+    return result
+
+
 def build_query_cloud(query: str) -> dict[str, int]:
-    """Обрабатывает строку запроса и возвращает облако лексем с весами."""
+    """Строит облако лексем запроса: прямые термины + семантическое расширение."""
     lemmas = preprocess(query)
     cloud: dict[str, int] = {}
 
-    grams = build_ngrams(lemmas, max_n=3)
-    for g in grams:
+    # Прямые n-граммы из запроса — всегда включаются, без фильтров
+    for g in build_ngrams(lemmas, max_n=3):
         cloud[g] = cloud.get(g, 0) + 1
 
     synonyms = _get_synonyms()
-    for lemma in [g for g in grams if "_" not in g]:
-        local = synonyms.get(lemma)
-        # Если леммы нет в synonyms.json — спрашиваем RuWordNet live
-        syn_list = local[:3] if local else _ruwordnet_synonyms(lemma)[:3]
-        for syn in syn_list:
-            syn_lemmas = preprocess(syn)
-            if not syn_lemmas:
-                continue
-            for sg in build_ngrams(syn_lemmas, max_n=3):
-                cloud[sg] = cloud.get(sg, 0) + 1
+    vocab, rare_vocab = _get_indicator_vocab()
+
+    for lemma in [g for g in cloud if "_" not in g]:
+        for term in _expand_lemma(lemma, synonyms, vocab, rare_vocab):
+            cloud[term] = cloud.get(term, 0) + 1
 
     return cloud
 
