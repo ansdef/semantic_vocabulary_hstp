@@ -13,7 +13,7 @@ _BASE = Path(__file__).parent
 sys.path.insert(0, str(_BASE / "utils"))
 sys.path.insert(0, str(_BASE))
 
-from preprocessing import preprocess  # noqa: E402
+from preprocessing import preprocess, get_morph  # noqa: E402
 from ngrams import build_ngrams  # noqa: E402
 
 _CLOUDS_PATH = _BASE / "05_indicator_clouds.json"
@@ -21,6 +21,8 @@ _SYNONYMS_PATH = _BASE / "utils" / "synonyms.json"
 
 _indicator_clouds: dict | None = None
 _synonyms: dict | None = None
+_ruwordnet = None          # None = not yet tried; False = unavailable
+_ruwn_cache: dict = {}     # lemma → [synonyms] runtime cache
 
 
 def _get_clouds() -> dict:
@@ -37,6 +39,40 @@ def _get_synonyms() -> dict:
     return _synonyms
 
 
+def _get_ruwordnet():
+    global _ruwordnet
+    if _ruwordnet is None:
+        try:
+            import ruwordnet
+            _ruwordnet = ruwordnet.RuWordNet()
+        except Exception:
+            _ruwordnet = False
+    return _ruwordnet if _ruwordnet else None
+
+
+def _ruwordnet_synonyms(lemma: str) -> list[str]:
+    """Live RuWordNet lookup: возвращает синонимы леммы (кешируется)."""
+    if lemma in _ruwn_cache:
+        return _ruwn_cache[lemma]
+    wn = _get_ruwordnet()
+    if not wn:
+        _ruwn_cache[lemma] = []
+        return []
+    morph = get_morph()
+    syns: set[str] = set()
+    try:
+        for synset in wn.get_synsets(lemma):
+            for sense in synset.senses:
+                s = morph.parse(sense.name.lower())[0].normal_form
+                if s != lemma and len(s) > 2:
+                    syns.add(s)
+    except Exception:
+        pass
+    result = list(syns)[:5]
+    _ruwn_cache[lemma] = result
+    return result
+
+
 def build_query_cloud(query: str) -> dict[str, int]:
     """Обрабатывает строку запроса и возвращает облако лексем с весами."""
     lemmas = preprocess(query)
@@ -48,7 +84,10 @@ def build_query_cloud(query: str) -> dict[str, int]:
 
     synonyms = _get_synonyms()
     for lemma in [g for g in grams if "_" not in g]:
-        for syn in synonyms.get(lemma, [])[:3]:
+        local = synonyms.get(lemma)
+        # Если леммы нет в synonyms.json — спрашиваем RuWordNet live
+        syn_list = local[:3] if local else _ruwordnet_synonyms(lemma)[:3]
+        for syn in syn_list:
             syn_lemmas = preprocess(syn)
             if not syn_lemmas:
                 continue
