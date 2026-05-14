@@ -114,9 +114,9 @@ def _expand_lemma(lemma: str, synonyms: dict, vocab: set, rare_vocab: set) -> li
         не различают показатели, а лишь раздувают пересечение
     """
     curated = synonyms.get(lemma)
-    if curated:
-        # Curated запись: качество гарантировано, используем без IDF-фильтра
-        # (пользователь сам решил, что эти синонимы подходят)
+    if curated is not None:
+        # Curated запись: качество гарантировано, используем без IDF-фильтра.
+        # Пустой список [] тоже считается curated — означает «не расширять».
         source = curated
         use_idf = False
     else:
